@@ -113,6 +113,7 @@ export default function App() {
 
   const handleLogout = () => {
     setMobileMenuOpen(false);
+    setAuthForm(DEFAULT_OPERATOR);
     setIsAuthenticated(false);
     setAnalysisResult(null);
   };
@@ -320,7 +321,8 @@ export default function App() {
                     required
                     value={authForm.name}
                     onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
-                    placeholder="Sathwik Raju"
+                    placeholder="Enter your name"
+                    autoComplete="off"
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -335,7 +337,8 @@ export default function App() {
                     required
                     value={authForm.email}
                     onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                    placeholder="sathwik@agropulse.in"
+                    placeholder="Enter your email"
+                    autoComplete="off"
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -350,7 +353,8 @@ export default function App() {
                     required
                     value={authForm.password}
                     onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
+                    autoComplete="new-password"
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500"
                   />
                 </div>
