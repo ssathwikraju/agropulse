@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Leaf, 
-  UploadCloud, 
-  Activity, 
-  Droplets, 
-  Sun, 
-  Wind, 
-  ChevronRight, 
-  TrendingUp, 
-  MapPin, 
-  RefreshCw, 
-  FileText, 
+import {
+  Leaf,
+  UploadCloud,
+  Activity,
+  Droplets,
+  Sun,
+  Wind,
+  ChevronRight,
+  TrendingUp,
+  MapPin,
+  RefreshCw,
+  FileText,
   Layers,
   Home,
   LayoutGrid,
@@ -27,19 +27,25 @@ import {
   Sliders,
   LogOut,
   Lock,
-  Mail
+  Mail,
+  Menu,
+  X
 } from 'lucide-react';
+
+const DEFAULT_OPERATOR = {
+  name: '',
+  email: '',
+  password: ''
+};
 
 export default function App() {
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Authentication State (defaults to signed-in Sathwik Raju profile)
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [authMode, setAuthMode] = useState('signin'); // 'signin' or 'signup'
-  const [authForm, setAuthForm] = useState({
-    name: 'Sathwik Raju',
-    email: 'sathwik@agropulse.in',
-    password: '••••••••'
-  });
+  const [authForm, setAuthForm] = useState(DEFAULT_OPERATOR);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [analysisType, setAnalysisType] = useState('leaf');
@@ -52,9 +58,10 @@ export default function App() {
 
   // Farm Profile & Irrigation Calculator States
   const [farmProfile, setFarmProfile] = useState({
-    owner: "Sathwik Raju",
-    farmName: "AgroPulse Demo Plot",
-    region: "Chennai Region",
+    owner: 'Sathwik Raju',
+    email: 'sathwik@agropulse.in',
+    farmName: 'AgroPulse Demo Plot',
+    region: 'Chennai Region',
     lat: 13.0827,
     lon: 80.2707,
     acres: 2.5
@@ -63,53 +70,63 @@ export default function App() {
   const [calcCrop, setCalcCrop] = useState('Rice');
 
   const [telemetry, setTelemetry] = useState({
-    region: "Chennai Region",
-    temperature: "28.5°C",
+    region: 'Chennai Region',
+    temperature: '28.5°C',
     rawTemp: 28.5,
-    feelsLike: "30.2°C",
-    soilTemp: "27.1°C",
-    humidity: "82%",
+    feelsLike: '30.2°C',
+    soilTemp: '27.1°C',
+    humidity: '82%',
     rawHumidity: 82,
-    windSpeed: "14.0 km/h",
-    cloudCover: "35%",
-    soilMoisture: "31.2%",
+    windSpeed: '14.0 km/h',
+    cloudCover: '35%',
+    soilMoisture: '31.2%',
     rawSoilMoisture: 31.2,
-    rootMoisture: "34.5%",
-    irrigationPriority: "Low",
-    fungalRisk: "High fungal risk"
+    rootMoisture: '34.5%',
+    irrigationPriority: 'Low',
+    fungalRisk: 'High fungal risk'
   });
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/telemetry?lat=${farmProfile.lat}&lon=${farmProfile.lon}`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.status === 'success') {
           setTelemetry({ ...data, region: farmProfile.region });
         }
       })
-      .catch(err => console.warn('Telemetry sync fallback:', err));
-  }, [farmProfile.lat, farmProfile.lon, farmProfile.region]);
+      .catch((err) => console.warn('Telemetry sync fallback:', err));
+  }, [API_BASE_URL, farmProfile.lat, farmProfile.lon, farmProfile.region]);
+
+  const handleSelectTab = (tabId) => {
+    setActiveTab(tabId);
+    setMobileMenuOpen(false);
+  };
 
   const handleAuthSubmit = (e) => {
     e.preventDefault();
     const userName = authForm.name.trim() || 'Sathwik Raju';
-    setFarmProfile(prev => ({ ...prev, owner: userName }));
+    const userEmail = authForm.email.trim() || 'sathwik@agropulse.in';
+    setFarmProfile((prev) => ({ ...prev, owner: userName, email: userEmail }));
     setIsAuthenticated(true);
     setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
+    setMobileMenuOpen(false);
     setIsAuthenticated(false);
     setAnalysisResult(null);
   };
 
   const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || 'SR';
+    return (
+      name
+        .split(' ')
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || 'SR'
+    );
   };
 
   const handleImageChange = (e) => {
@@ -126,10 +143,16 @@ export default function App() {
       id: Date.now(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: analysisType === 'leaf' ? `${selectedCrop} Pathology` : 'Field GLI Canopy',
-      summary: analysisType === 'leaf' ? resultData.condition : `${resultData.status} (${resultData.canopyCoverage}%)`,
-      metric: analysisType === 'leaf' ? `${resultData.confidence}% Conf.` : `GLI ${resultData.gliIndex.split(' ')[0]}`
+      summary:
+        analysisType === 'leaf'
+          ? resultData.condition
+          : `${resultData.status} (${resultData.canopyCoverage}%)`,
+      metric:
+        analysisType === 'leaf'
+          ? `${resultData.confidence}% Conf.`
+          : `GLI ${resultData.gliIndex.split(' ')[0]}`
     };
-    setScanHistory(prev => [entry, ...prev]);
+    setScanHistory((prev) => [entry, ...prev]);
   };
 
   const runAnalysis = async () => {
@@ -144,7 +167,7 @@ export default function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/diagnose`, {
         method: 'POST',
-        body: formData,
+        body: formData
       });
       const data = await response.json();
       setAnalysisResult(data);
@@ -196,13 +219,13 @@ export default function App() {
 
   const handleRegionChange = (regionName) => {
     const presets = {
-      "Chennai Region": { lat: 13.0827, lon: 80.2707 },
-      "East Godavari Region": { lat: 17.0005, lon: 81.8040 },
-      "Thanjavur Delta": { lat: 10.7870, lon: 79.1378 },
-      "Guntur Agro Belt": { lat: 16.3067, lon: 80.4365 }
+      'Chennai Region': { lat: 13.0827, lon: 80.2707 },
+      'East Godavari Region': { lat: 17.0005, lon: 81.804 },
+      'Thanjavur Delta': { lat: 10.787, lon: 79.1378 },
+      'Guntur Agro Belt': { lat: 16.3067, lon: 80.4365 }
     };
-    const coords = presets[regionName] || presets["Chennai Region"];
-    setFarmProfile(prev => ({ ...prev, region: regionName, ...coords }));
+    const coords = presets[regionName] || presets['Chennai Region'];
+    setFarmProfile((prev) => ({ ...prev, region: regionName, ...coords }));
   };
 
   const menuItems = [
@@ -215,33 +238,36 @@ export default function App() {
     { id: 'alerts', label: 'Alerts', icon: Bell },
     { id: 'irrigation', label: 'Irrigation', icon: Wind },
     { id: 'reports', label: 'Reports', icon: FileText },
-    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'profile', label: 'Profile', icon: User }
   ];
 
   const cropGuides = [
     {
-      name: "Rice (Oryza sativa)",
-      stage: "Vegetative / Tillering",
-      optimalTemp: "22°C – 32°C",
-      optimalMoisture: "35% – 50% (Saturated)",
-      commonPathology: "Bacterial Leaf Blight, Rice Blast",
-      advisory: "Maintain shallow water depth during tillering; avoid excess nitrogen during high humidity."
+      name: 'Rice (Oryza sativa)',
+      stage: 'Vegetative / Tillering',
+      optimalTemp: '22°C – 32°C',
+      optimalMoisture: '35% – 50% (Saturated)',
+      commonPathology: 'Bacterial Leaf Blight, Rice Blast',
+      advisory:
+        'Maintain shallow water depth during tillering; avoid excess nitrogen during high humidity.'
     },
     {
-      name: "Tomato (Solanum lycopersicum)",
-      stage: "Flowering & Fruit Set",
-      optimalTemp: "20°C – 28°C",
-      optimalMoisture: "22% – 30% (Well-drained)",
-      commonPathology: "Early Blight, Late Blight, Leaf Curl",
-      advisory: "Use root-zone drip irrigation to keep lower foliage dry and prevent fungal spores."
+      name: 'Tomato (Solanum lycopersicum)',
+      stage: 'Flowering & Fruit Set',
+      optimalTemp: '20°C – 28°C',
+      optimalMoisture: '22% – 30% (Well-drained)',
+      commonPathology: 'Early Blight, Late Blight, Leaf Curl',
+      advisory:
+        'Use root-zone drip irrigation to keep lower foliage dry and prevent fungal spores.'
     },
     {
-      name: "Potato (Solanum tuberosum)",
-      stage: "Tuber Bulking",
-      optimalTemp: "16°C – 24°C",
-      optimalMoisture: "25% – 32% (Consistent)",
-      commonPathology: "Late Blight (Phytophthora infestans)",
-      advisory: "Monitor nocturnal humidity spikes closely; apply preventive copper/mancozeb sprays."
+      name: 'Potato (Solanum tuberosum)',
+      stage: 'Tuber Bulking',
+      optimalTemp: '16°C – 24°C',
+      optimalMoisture: '25% – 32% (Consistent)',
+      commonPathology: 'Late Blight (Phytophthora infestans)',
+      advisory:
+        'Monitor nocturnal humidity spikes closely; apply preventive copper/mancozeb sprays.'
     }
   ];
 
@@ -284,7 +310,9 @@ export default function App() {
 
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-600 block mb-1">Farmer / Operator Name</label>
+                <label className="text-xs font-semibold text-slate-600 block mb-1">
+                  Farmer / Operator Name
+                </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
@@ -292,7 +320,7 @@ export default function App() {
                     required
                     value={authForm.name}
                     onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
-                    placeholder="Enter your name"
+                    placeholder="Sathwik Raju"
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -307,7 +335,7 @@ export default function App() {
                     required
                     value={authForm.email}
                     onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                    placeholder="farmer@agropulse.in"
+                    placeholder="sathwik@agropulse.in"
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -341,7 +369,11 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setFarmProfile(prev => ({ ...prev, owner: 'Sathwik Raju' }));
+                  setFarmProfile((prev) => ({
+                    ...prev,
+                    owner: 'Sathwik Raju',
+                    email: 'sathwik@agropulse.in'
+                  }));
                   setIsAuthenticated(true);
                 }}
                 className="text-xs font-semibold text-emerald-700 hover:text-emerald-800"
@@ -360,9 +392,8 @@ export default function App() {
   // ==========================================
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans">
-      
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between hidden md:flex border-r border-slate-800">
+      {/* Desktop Sidebar Navigation */}
+      <aside className="w-64 bg-slate-900 text-slate-300 flex-col justify-between hidden md:flex border-r border-slate-800">
         <div className="overflow-y-auto">
           <div className="p-6 flex items-center space-x-3 border-b border-slate-800">
             <div className="bg-emerald-600 p-2 rounded-xl text-white">
@@ -375,7 +406,9 @@ export default function App() {
           </div>
 
           <div className="px-6 pt-5 pb-2">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Website Menu</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Website Menu
+            </p>
           </div>
 
           <nav className="px-3 pb-4 space-y-1">
@@ -385,7 +418,7 @@ export default function App() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleSelectTab(item.id)}
                   className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                     isActive
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/30'
@@ -402,13 +435,16 @@ export default function App() {
 
         {/* User Footer + Logout */}
         <div className="p-4 border-t border-slate-800 space-y-2">
-          <div onClick={() => setActiveTab('profile')} className="cursor-pointer bg-slate-800/60 hover:bg-slate-800 p-3 rounded-xl flex items-center space-x-3 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+          <div
+            onClick={() => handleSelectTab('profile')}
+            className="cursor-pointer bg-slate-800/60 hover:bg-slate-800 p-3 rounded-xl flex items-center space-x-3 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
               {getInitials(farmProfile.owner)}
             </div>
             <div className="text-xs overflow-hidden">
               <p className="text-white font-medium truncate">{farmProfile.owner}</p>
-              <p className="text-slate-400">System Ready</p>
+              <p className="text-slate-400 truncate">{farmProfile.email}</p>
             </div>
           </div>
 
@@ -422,52 +458,178 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Mobile Slide-Over Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-950/60"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <aside className="relative z-50 w-72 max-w-[85vw] bg-slate-900 text-slate-300 flex flex-col justify-between h-full shadow-2xl">
+            <div className="overflow-y-auto">
+              <div className="p-5 flex items-center justify-between border-b border-slate-800">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-emerald-600 p-2 rounded-xl text-white">
+                    <Leaf className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-white font-bold text-base tracking-tight">AgroPulse</h1>
+                    <p className="text-[11px] text-slate-400">Crop Monitoring System</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-5 pt-4 pb-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Website Menu
+                </p>
+              </div>
+
+              <nav className="px-3 pb-4 space-y-1">
+                {menuItems.map((item) => {
+                  const IconComponent = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectTab(item.id)}
+                      className={`w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        isActive
+                          ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/30'
+                          : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <IconComponent className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="p-4 border-t border-slate-800 space-y-2">
+              <div
+                onClick={() => handleSelectTab('profile')}
+                className="cursor-pointer bg-slate-800/70 p-3 rounded-xl flex items-center space-x-3"
+              >
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  {getInitials(farmProfile.owner)}
+                </div>
+                <div className="text-xs overflow-hidden">
+                  <p className="text-white font-medium truncate">{farmProfile.owner}</p>
+                  <p className="text-slate-400 truncate">{farmProfile.email}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main Viewport */}
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto">
-        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center space-x-2 text-sm text-slate-500">
-            <MapPin className="w-4 h-4 text-emerald-600" />
-            <span className="font-medium text-slate-700">{farmProfile.region}</span>
-            <span>•</span>
-            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-semibold">Virtual Telemetry Active</span>
+      <main className="flex-1 flex flex-col min-h-screen md:h-screen md:overflow-y-auto">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
+                aria-label="Open menu"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+              <MapPin className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="font-medium text-xs sm:text-sm text-slate-700 truncate">
+                {farmProfile.region}
+              </span>
+              <span className="hidden sm:inline text-slate-400">•</span>
+              <span className="hidden sm:inline text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-semibold">
+                Virtual Telemetry Active
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-3 flex-shrink-0">
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-none">
+                  {farmProfile.owner}
+                </p>
+                <p className="text-[11px] text-slate-500 truncate max-w-[140px] sm:max-w-none">
+                  {farmProfile.email}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                className="md:hidden p-2 rounded-lg text-red-600 hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-xs text-slate-400">Active Module</p>
-              <p className="text-xs font-bold text-slate-700 capitalize">{activeTab}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Logout"
-              className="md:hidden p-2 rounded-lg text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+          {/* Quick Scrollable Module Strip on Mobile */}
+          <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pt-2.5 pb-1">
+            {menuItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleSelectTab(item.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </header>
 
-        <div className="p-8 max-w-7xl w-full mx-auto space-y-8">
-
+        <div className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-8">
           {/* 1. HOME */}
           {activeTab === 'home' && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-r from-emerald-800 to-emerald-600 rounded-2xl p-8 text-white shadow-lg">
-                <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full">Hardware-Free Precision Agriculture</span>
-                <h2 className="text-3xl font-bold mt-4">Welcome back, {farmProfile.owner}</h2>
+              <div className="bg-gradient-to-r from-emerald-800 to-emerald-600 rounded-2xl p-6 sm:p-8 text-white shadow-lg">
+                <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  Hardware-Free Precision Agriculture
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-bold mt-4">
+                  Welcome back, {farmProfile.owner}
+                </h2>
                 <p className="text-emerald-100 text-sm mt-2 max-w-2xl">
-                  AgroPulse is actively monitoring <strong className="text-white">{farmProfile.farmName}</strong> ({farmProfile.acres} acres) in <strong className="text-white">{farmProfile.region}</strong> using satellite agro-climatic models and computer vision diagnostics—zero ground hardware required.
+                  AgroPulse is actively monitoring{' '}
+                  <strong className="text-white">{farmProfile.farmName}</strong> ({farmProfile.acres}{' '}
+                  acres) in <strong className="text-white">{farmProfile.region}</strong> using
+                  satellite agro-climatic models and computer vision diagnostics—zero ground
+                  hardware required.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button
-                    onClick={() => setActiveTab('dashboard')}
+                    onClick={() => handleSelectTab('dashboard')}
                     className="bg-white text-emerald-800 px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-emerald-50 transition-colors"
                   >
                     <span>Open AI Vision Lab</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => setActiveTab('alerts')}
+                    onClick={() => handleSelectTab('alerts')}
                     className="bg-emerald-900/40 text-white border border-white/20 px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-emerald-900/60 transition-colors"
                   >
                     Check Active Alerts
@@ -477,32 +639,41 @@ export default function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-                  <p className="text-xs font-bold text-emerald-600 uppercase">01 • Virtual Telemetry</p>
+                  <p className="text-xs font-bold text-emerald-600 uppercase">
+                    01 • Virtual Telemetry
+                  </p>
                   <h3 className="text-lg font-bold text-slate-800">Open-Meteo Sync</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Topsoil moisture is currently <strong>{telemetry.soilMoisture}</strong> at <strong>{telemetry.temperature}</strong> ambient temperature.
+                    Topsoil moisture is currently <strong>{telemetry.soilMoisture}</strong> at{' '}
+                    <strong>{telemetry.temperature}</strong> ambient temperature.
                   </p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-                  <p className="text-xs font-bold text-emerald-600 uppercase">02 • Computer Vision</p>
+                  <p className="text-xs font-bold text-emerald-600 uppercase">
+                    02 • Computer Vision
+                  </p>
                   <h3 className="text-lg font-bold text-slate-800">GLI Canopy Indexing</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Upload wide field captures to compute Green Leaf Index ratios and bare soil exposure without drones.
+                    Upload wide field captures to compute Green Leaf Index ratios and bare soil
+                    exposure without drones.
                   </p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-                  <p className="text-xs font-bold text-emerald-600 uppercase">03 • Crop Pathology</p>
+                  <p className="text-xs font-bold text-emerald-600 uppercase">
+                    03 • Crop Pathology
+                  </p>
                   <h3 className="text-lg font-bold text-slate-800">Multi-Crop Diagnosis</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Rapid leaf lesion classification and targeted treatment directives for Rice, Tomato, and Potato.
+                    Rapid leaf lesion classification and targeted treatment directives for Rice,
+                    Tomato, and Potato.
                   </p>
                 </div>
               </div>
             </div>
           )}
-          
+
           {/* 2. DASHBOARD */}
           {activeTab === 'dashboard' && (
             <>
@@ -510,8 +681,12 @@ export default function App() {
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-slate-400">Virtual Soil Moisture</p>
-                    <h3 className="text-2xl font-bold text-slate-800 mt-1">{telemetry.soilMoisture}</h3>
-                    <span className="text-xs text-emerald-600 font-medium">Depth: 0–7 cm (Sat-model)</span>
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1">
+                      {telemetry.soilMoisture}
+                    </h3>
+                    <span className="text-xs text-emerald-600 font-medium">
+                      Depth: 0–7 cm (Sat-model)
+                    </span>
                   </div>
                   <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600">
                     <Droplets className="w-6 h-6" />
@@ -521,7 +696,9 @@ export default function App() {
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-slate-400">Ambient Temperature</p>
-                    <h3 className="text-2xl font-bold text-slate-800 mt-1">{telemetry.temperature}</h3>
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1">
+                      {telemetry.temperature}
+                    </h3>
                     <span className="text-xs text-amber-600 font-medium">Live Reading</span>
                   </div>
                   <div className="bg-amber-50 p-3 rounded-xl text-amber-600">
@@ -533,7 +710,9 @@ export default function App() {
                   <div>
                     <p className="text-xs font-medium text-slate-400">Relative Humidity</p>
                     <h3 className="text-2xl font-bold text-slate-800 mt-1">{telemetry.humidity}</h3>
-                    <span className="text-xs text-blue-600 font-medium">{telemetry.fungalRisk}</span>
+                    <span className="text-xs text-blue-600 font-medium">
+                      {telemetry.fungalRisk}
+                    </span>
                   </div>
                   <div className="bg-blue-50 p-3 rounded-xl text-blue-600">
                     <Wind className="w-6 h-6" />
@@ -543,7 +722,9 @@ export default function App() {
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-slate-400">Irrigation Priority</p>
-                    <h3 className="text-2xl font-bold text-slate-800 mt-1">{telemetry.irrigationPriority}</h3>
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1">
+                      {telemetry.irrigationPriority}
+                    </h3>
                     <span className="text-xs text-slate-500 font-medium">Algorithmic Advisory</span>
                   </div>
                   <div className="bg-slate-100 p-3 rounded-xl text-slate-600">
@@ -555,11 +736,16 @@ export default function App() {
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
                   <div>
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 flex-wrap">
                       <span>AI Crop Diagnostic Laboratory</span>
-                      <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">Hardware-Free</span>
+                      <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">
+                        Hardware-Free
+                      </span>
                     </h2>
-                    <p className="text-sm text-slate-500 mt-0.5">Upload leaf photos for pathology classification or field captures for canopy coverage.</p>
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      Upload leaf photos for pathology classification or field captures for canopy
+                      coverage.
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -576,18 +762,28 @@ export default function App() {
                     )}
 
                     <div className="flex bg-slate-100 p-1 rounded-xl">
-                      <button 
-                        onClick={() => { setAnalysisType('leaf'); setAnalysisResult(null); }}
+                      <button
+                        onClick={() => {
+                          setAnalysisType('leaf');
+                          setAnalysisResult(null);
+                        }}
                         className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-                          analysisType === 'leaf' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                          analysisType === 'leaf'
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
                         Close-up Leaf Disease
                       </button>
-                      <button 
-                        onClick={() => { setAnalysisType('field'); setAnalysisResult(null); }}
+                      <button
+                        onClick={() => {
+                          setAnalysisType('field');
+                          setAnalysisResult(null);
+                        }}
                         className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-                          analysisType === 'field' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                          analysisType === 'field'
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
                         Field Canopy (GLI Index)
@@ -599,21 +795,23 @@ export default function App() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                   <div className="space-y-4">
                     <div className="relative border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-emerald-500 transition-colors bg-slate-50/50">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
+                      <input
+                        type="file"
+                        accept="image/*"
                         onChange={handleImageChange}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
-                      
+
                       {imagePreview ? (
                         <div className="space-y-3">
-                          <img 
-                            src={imagePreview} 
-                            alt="Target Preview" 
+                          <img
+                            src={imagePreview}
+                            alt="Target Preview"
                             className="max-h-64 mx-auto rounded-xl shadow-sm object-cover border border-slate-200"
                           />
-                          <p className="text-xs text-slate-500">Click or drag a new image to replace</p>
+                          <p className="text-xs text-slate-500">
+                            Click or drag a new image to replace
+                          </p>
                         </div>
                       ) : (
                         <div className="py-10 space-y-3">
@@ -621,9 +819,13 @@ export default function App() {
                             <UploadCloud className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-slate-700">Click to upload or drag & drop</p>
+                            <p className="text-sm font-semibold text-slate-700">
+                              Click to upload or drag & drop
+                            </p>
                             <p className="text-xs text-slate-400 mt-1">
-                              {analysisType === 'leaf' ? `PNG, JPG or JPEG leaf close-up (${selectedCrop})` : 'Wide landscape crop land photo'}
+                              {analysisType === 'leaf'
+                                ? `PNG, JPG or JPEG leaf close-up (${selectedCrop})`
+                                : 'Wide landscape crop land photo'}
                             </p>
                           </div>
                         </div>
@@ -634,8 +836,8 @@ export default function App() {
                       onClick={runAnalysis}
                       disabled={!selectedImage || isAnalyzing}
                       className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm flex items-center justify-center space-x-2 transition-all ${
-                        !selectedImage || isAnalyzing 
-                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                        !selectedImage || isAnalyzing
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                           : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-700/20'
                       }`}
                     >
@@ -647,7 +849,12 @@ export default function App() {
                       ) : (
                         <>
                           <Activity className="w-4 h-4" />
-                          <span>Execute {analysisType === 'leaf' ? `${selectedCrop} Disease Diagnosis` : 'Canopy Evaluation'}</span>
+                          <span>
+                            Execute{' '}
+                            {analysisType === 'leaf'
+                              ? `${selectedCrop} Disease Diagnosis`
+                              : 'Canopy Evaluation'}
+                          </span>
                         </>
                       )}
                     </button>
@@ -655,19 +862,25 @@ export default function App() {
 
                   <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 min-h-[340px] flex flex-col justify-between">
                     <div>
-                      <h4 className="text-sm font-bold text-slate-400 tracking-wider uppercase">Inference Output</h4>
-                      
+                      <h4 className="text-sm font-bold text-slate-400 tracking-wider uppercase">
+                        Inference Output
+                      </h4>
+
                       {!analysisResult && !isAnalyzing && (
                         <div className="text-center py-20 text-slate-400">
                           <Layers className="w-10 h-10 mx-auto stroke-1 mb-2 text-slate-300" />
-                          <p className="text-sm">Upload an image and run analysis to populate real-time diagnostics.</p>
+                          <p className="text-sm">
+                            Upload an image and run analysis to populate real-time diagnostics.
+                          </p>
                         </div>
                       )}
 
                       {isAnalyzing && (
                         <div className="text-center py-20 space-y-3">
                           <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                          <p className="text-xs text-slate-500 font-medium">Processing color tensors & evaluating neural layers...</p>
+                          <p className="text-xs text-slate-500 font-medium">
+                            Processing color tensors & evaluating neural layers...
+                          </p>
                         </div>
                       )}
 
@@ -675,12 +888,16 @@ export default function App() {
                         <div className="mt-4 space-y-5">
                           {analysisType === 'leaf' ? (
                             <>
-                              <div className="flex items-start justify-between">
+                              <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <p className="text-xs text-slate-500 font-semibold">Detected Pathology</p>
-                                  <h3 className="text-lg font-bold text-slate-800 mt-1">{analysisResult.condition}</h3>
+                                  <p className="text-xs text-slate-500 font-semibold">
+                                    Detected Pathology
+                                  </p>
+                                  <h3 className="text-lg font-bold text-slate-800 mt-1">
+                                    {analysisResult.condition}
+                                  </h3>
                                 </div>
-                                <span className="bg-red-50 text-red-600 border border-red-200 text-xs px-2.5 py-1 rounded-full font-bold">
+                                <span className="bg-red-50 text-red-600 border border-red-200 text-xs px-2.5 py-1 rounded-full font-bold flex-shrink-0">
                                   Severity: {analysisResult.severity}
                                 </span>
                               </div>
@@ -688,18 +905,28 @@ export default function App() {
                               <div>
                                 <div className="flex justify-between text-xs font-semibold mb-1">
                                   <span className="text-slate-500">Confidence Score</span>
-                                  <span className="text-emerald-700">{analysisResult.confidence}%</span>
+                                  <span className="text-emerald-700">
+                                    {analysisResult.confidence}%
+                                  </span>
                                 </div>
                                 <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                  <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${analysisResult.confidence}%` }}></div>
+                                  <div
+                                    className="bg-emerald-600 h-full rounded-full"
+                                    style={{ width: `${analysisResult.confidence}%` }}
+                                  ></div>
                                 </div>
                               </div>
 
                               <div className="space-y-2">
-                                <p className="text-xs font-bold text-slate-600">Prescribed Measures:</p>
+                                <p className="text-xs font-bold text-slate-600">
+                                  Prescribed Measures:
+                                </p>
                                 <ul className="space-y-1.5">
                                   {analysisResult.remedies.map((remedy, idx) => (
-                                    <li key={idx} className="text-xs text-slate-600 flex items-start gap-2">
+                                    <li
+                                      key={idx}
+                                      className="text-xs text-slate-600 flex items-start gap-2"
+                                    >
                                       <ChevronRight className="w-3.5 h-3.5 text-emerald-600 mt-0.5 flex-shrink-0" />
                                       <span>{remedy}</span>
                                     </li>
@@ -710,8 +937,12 @@ export default function App() {
                           ) : (
                             <>
                               <div>
-                                <p className="text-xs text-slate-500 font-semibold">Vegetative Status</p>
-                                <h3 className="text-lg font-bold text-slate-800 mt-1">{analysisResult.status}</h3>
+                                <p className="text-xs text-slate-500 font-semibold">
+                                  Vegetative Status
+                                </p>
+                                <h3 className="text-lg font-bold text-slate-800 mt-1">
+                                  {analysisResult.status}
+                                </h3>
                               </div>
 
                               {analysisResult.heatmapImage && (
@@ -719,8 +950,10 @@ export default function App() {
                                   <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
                                     <span>OpenCV GLI Segmentation Mask</span>
                                     <span className="flex items-center gap-2">
-                                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span> Canopy
-                                      <span className="inline-block w-2 h-2 rounded-full bg-red-500 ml-1"></span> Bare Soil
+                                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>{' '}
+                                      Canopy
+                                      <span className="inline-block w-2 h-2 rounded-full bg-red-500 ml-1"></span>{' '}
+                                      Bare Soil
                                     </span>
                                   </div>
                                   <img
@@ -734,11 +967,15 @@ export default function App() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-white p-3 rounded-xl border border-slate-200">
                                   <p className="text-xs text-slate-400">Canopy Cover</p>
-                                  <p className="text-xl font-bold text-emerald-700">{analysisResult.canopyCoverage}%</p>
+                                  <p className="text-xl font-bold text-emerald-700">
+                                    {analysisResult.canopyCoverage}%
+                                  </p>
                                 </div>
                                 <div className="bg-white p-3 rounded-xl border border-slate-200">
                                   <p className="text-xs text-slate-400">Mean GLI Index</p>
-                                  <p className="text-sm font-bold text-slate-700 mt-1">{analysisResult.gliIndex}</p>
+                                  <p className="text-sm font-bold text-slate-700 mt-1">
+                                    {analysisResult.gliIndex}
+                                  </p>
                                 </div>
                               </div>
 
@@ -746,7 +983,10 @@ export default function App() {
                                 <p className="text-xs font-bold text-slate-600">Directives:</p>
                                 <ul className="space-y-1.5">
                                   {analysisResult.remedies.map((remedy, idx) => (
-                                    <li key={idx} className="text-xs text-slate-600 flex items-start gap-2">
+                                    <li
+                                      key={idx}
+                                      className="text-xs text-slate-600 flex items-start gap-2"
+                                    >
                                       <ChevronRight className="w-3.5 h-3.5 text-emerald-600 mt-0.5 flex-shrink-0" />
                                       <span>{remedy}</span>
                                     </li>
@@ -760,7 +1000,7 @@ export default function App() {
                     </div>
 
                     {analysisResult && (
-                      <button 
+                      <button
                         onClick={() => window.print()}
                         className="mt-6 w-full py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
                       >
@@ -779,7 +1019,9 @@ export default function App() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-bold text-slate-800">Thermal & Micro-Climate Analysis</h2>
-                <p className="text-sm text-slate-500">Live atmospheric vs. topsoil root-zone thermal telemetry for {farmProfile.region}.</p>
+                <p className="text-sm text-slate-500">
+                  Live atmospheric vs. topsoil root-zone thermal telemetry for {farmProfile.region}.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -807,7 +1049,9 @@ export default function App() {
                   </div>
                   <p className="text-xs font-semibold text-slate-400">Topsoil Temperature (0–7 cm)</p>
                   <h3 className="text-3xl font-bold text-slate-800">{telemetry.soilTemp}</h3>
-                  <p className="text-xs text-emerald-600 font-medium">Optimal germination & root zone</p>
+                  <p className="text-xs text-emerald-600 font-medium">
+                    Optimal germination & root zone
+                  </p>
                 </div>
               </div>
             </div>
@@ -817,8 +1061,12 @@ export default function App() {
           {activeTab === 'soil' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Virtual Soil Profile & Saturation</h2>
-                <p className="text-sm text-slate-500">Multi-depth volumetric soil moisture estimation without buried probes.</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Virtual Soil Profile & Saturation
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Multi-depth volumetric soil moisture estimation without buried probes.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -826,28 +1074,49 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-semibold text-slate-400">Surface Horizon (0–7 cm)</p>
-                      <h3 className="text-3xl font-bold text-slate-800 mt-1">{telemetry.soilMoisture}</h3>
+                      <h3 className="text-3xl font-bold text-slate-800 mt-1">
+                        {telemetry.soilMoisture}
+                      </h3>
                     </div>
-                    <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full">Topsoil Layer</span>
+                    <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full">
+                      Topsoil Layer
+                    </span>
                   </div>
                   <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                    <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${Math.min(telemetry.rawSoilMoisture * 2, 100)}%` }}></div>
+                    <div
+                      className="bg-emerald-600 h-full rounded-full"
+                      style={{ width: `${Math.min(telemetry.rawSoilMoisture * 2, 100)}%` }}
+                    ></div>
                   </div>
-                  <p className="text-xs text-slate-500">Volumetric water content directly influencing seedling roots and surface evaporation.</p>
+                  <p className="text-xs text-slate-500">
+                    Volumetric water content directly influencing seedling roots and surface
+                    evaporation.
+                  </p>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-semibold text-slate-400">Sub-Surface Root Zone (7–28 cm)</p>
-                      <h3 className="text-3xl font-bold text-slate-800 mt-1">{telemetry.rootMoisture}</h3>
+                      <p className="text-xs font-semibold text-slate-400">
+                        Sub-Surface Root Zone (7–28 cm)
+                      </p>
+                      <h3 className="text-3xl font-bold text-slate-800 mt-1">
+                        {telemetry.rootMoisture}
+                      </h3>
                     </div>
-                    <span className="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">Deep Reserve</span>
+                    <span className="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
+                      Deep Reserve
+                    </span>
                   </div>
                   <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                    <div className="bg-blue-600 h-full rounded-full" style={{ width: '68%' }}></div>
+                    <div
+                      className="bg-blue-600 h-full rounded-full"
+                      style={{ width: '68%' }}
+                    ></div>
                   </div>
-                  <p className="text-xs text-slate-500">Primary moisture reservoir sustaining mature crop roots between irrigation cycles.</p>
+                  <p className="text-xs text-slate-500">
+                    Primary moisture reservoir sustaining mature crop roots between irrigation cycles.
+                  </p>
                 </div>
               </div>
             </div>
@@ -857,27 +1126,38 @@ export default function App() {
           {activeTab === 'weather' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Atmospheric & Spraying Conditions</h2>
-                <p className="text-sm text-slate-500">Wind speed, cloud cover, and humidity metrics to schedule foliar pesticide application.</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Atmospheric & Spraying Conditions
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Wind speed, cloud cover, and humidity metrics to schedule foliar pesticide
+                  application.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
                   <p className="text-xs font-semibold text-slate-400">Wind Speed (10m)</p>
                   <h3 className="text-3xl font-bold text-slate-800">{telemetry.windSpeed}</h3>
-                  <span className="inline-block text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">Safe for Foliar Spraying</span>
+                  <span className="inline-block text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+                    Safe for Foliar Spraying
+                  </span>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
                   <p className="text-xs font-semibold text-slate-400">Cloud Cover</p>
                   <h3 className="text-3xl font-bold text-slate-800">{telemetry.cloudCover}</h3>
-                  <span className="inline-block text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">Moderate Solar PAR</span>
+                  <span className="inline-block text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                    Moderate Solar PAR
+                  </span>
                 </div>
 
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-2">
                   <p className="text-xs font-semibold text-slate-400">Relative Humidity</p>
                   <h3 className="text-3xl font-bold text-slate-800">{telemetry.humidity}</h3>
-                  <span className="inline-block text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">{telemetry.fungalRisk}</span>
+                  <span className="inline-block text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full">
+                    {telemetry.fungalRisk}
+                  </span>
                 </div>
               </div>
             </div>
@@ -887,26 +1167,44 @@ export default function App() {
           {activeTab === 'crops' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Supported Crop Agronomic Profiles</h2>
-                <p className="text-sm text-slate-500">Baseline growth parameters and pathogen vulnerabilities configured in the vision engine.</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Supported Crop Agronomic Profiles
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Baseline growth parameters and pathogen vulnerabilities configured in the vision
+                  engine.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {cropGuides.map((crop, index) => (
-                  <div key={index} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
+                  <div
+                    key={index}
+                    className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4"
+                  >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-lg">{crop.stage}</span>
+                        <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-lg">
+                          {crop.stage}
+                        </span>
                         <Sprout className="w-5 h-5 text-emerald-600" />
                       </div>
                       <h3 className="text-lg font-bold text-slate-800">{crop.name}</h3>
                       <div className="text-xs text-slate-600 space-y-1.5 pt-2 border-t border-slate-100">
-                        <p><strong>Optimal Temp:</strong> {crop.optimalTemp}</p>
-                        <p><strong>Target Soil Moisture:</strong> {crop.optimalMoisture}</p>
-                        <p><strong>Key Pathogens:</strong> {crop.commonPathology}</p>
+                        <p>
+                          <strong>Optimal Temp:</strong> {crop.optimalTemp}
+                        </p>
+                        <p>
+                          <strong>Target Soil Moisture:</strong> {crop.optimalMoisture}
+                        </p>
+                        <p>
+                          <strong>Key Pathogens:</strong> {crop.commonPathology}
+                        </p>
                       </div>
                     </div>
-                    <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">{crop.advisory}</p>
+                    <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      {crop.advisory}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -917,8 +1215,12 @@ export default function App() {
           {activeTab === 'alerts' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Agronomic Risk & System Alerts</h2>
-                <p className="text-sm text-slate-500">Automated threshold warnings derived from live atmospheric and soil conditions.</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Agronomic Risk & System Alerts
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Automated threshold warnings derived from live atmospheric and soil conditions.
+                </p>
               </div>
 
               <div className="space-y-4">
@@ -928,9 +1230,13 @@ export default function App() {
                       <AlertTriangle className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-amber-900">Elevated Fungal Spore Risk ({telemetry.humidity} Humidity)</h3>
+                      <h3 className="text-sm font-bold text-amber-900">
+                        Elevated Fungal Spore Risk ({telemetry.humidity} Humidity)
+                      </h3>
                       <p className="text-xs text-amber-800 mt-1">
-                        Relative humidity exceeds 75%. High moisture retention on leaf surfaces accelerates Early/Late Blight and Bacterial Leaf Blight. Avoid overhead evening watering.
+                        Relative humidity exceeds 75%. High moisture retention on leaf surfaces
+                        accelerates Early/Late Blight and Bacterial Leaf Blight. Avoid overhead
+                        evening watering.
                       </p>
                     </div>
                   </div>
@@ -942,9 +1248,12 @@ export default function App() {
                       <AlertTriangle className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-red-900">Low Topsoil Moisture Warning ({telemetry.soilMoisture})</h3>
+                      <h3 className="text-sm font-bold text-red-900">
+                        Low Topsoil Moisture Warning ({telemetry.soilMoisture})
+                      </h3>
                       <p className="text-xs text-red-800 mt-1">
-                        Volumetric water content has dropped below 18%. Initiate immediate drip irrigation to prevent wilting stress.
+                        Volumetric water content has dropped below 18%. Initiate immediate drip
+                        irrigation to prevent wilting stress.
                       </p>
                     </div>
                   </div>
@@ -954,9 +1263,12 @@ export default function App() {
                       <CheckCircle2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-emerald-900">Soil Moisture Optimal ({telemetry.soilMoisture})</h3>
+                      <h3 className="text-sm font-bold text-emerald-900">
+                        Soil Moisture Optimal ({telemetry.soilMoisture})
+                      </h3>
                       <p className="text-xs text-emerald-800 mt-1">
-                        Topsoil hydration is well balanced. No immediate drought or waterlogging stress detected in {farmProfile.region}.
+                        Topsoil hydration is well balanced. No immediate drought or waterlogging
+                        stress detected in {farmProfile.region}.
                       </p>
                     </div>
                   </div>
@@ -969,8 +1281,13 @@ export default function App() {
           {activeTab === 'irrigation' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Smart Irrigation Water Calculator</h2>
-                <p className="text-sm text-slate-500">Estimates required water volume (in liters) adjusted by live topsoil moisture ({telemetry.soilMoisture}).</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Smart Irrigation Water Calculator
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Estimates required water volume (in liters) adjusted by live topsoil moisture (
+                  {telemetry.soilMoisture}).
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -981,7 +1298,9 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Select Crop Variety</label>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">
+                      Select Crop Variety
+                    </label>
                     <select
                       value={calcCrop}
                       onChange={(e) => setCalcCrop(e.target.value)}
@@ -994,7 +1313,9 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Cultivated Area (Acres)</label>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">
+                      Cultivated Area (Acres)
+                    </label>
                     <input
                       type="number"
                       step="0.5"
@@ -1008,10 +1329,16 @@ export default function App() {
 
                 <div className="bg-emerald-900 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between">
                   <div>
-                    <span className="text-xs uppercase tracking-wider text-emerald-300 font-bold">Recommended Irrigation Volume</span>
-                    <h3 className="text-4xl font-bold mt-2">{calculateWaterRequirement().toLocaleString()} Liters</h3>
+                    <span className="text-xs uppercase tracking-wider text-emerald-300 font-bold">
+                      Recommended Irrigation Volume
+                    </span>
+                    <h3 className="text-4xl font-bold mt-2">
+                      {calculateWaterRequirement().toLocaleString()} Liters
+                    </h3>
                     <p className="text-xs text-emerald-200 mt-2">
-                      Adjusted dynamically for <strong>{calcAcres} acres</strong> of <strong>{calcCrop}</strong> at current <strong>{telemetry.soilMoisture}</strong> soil moisture.
+                      Adjusted dynamically for <strong>{calcAcres} acres</strong> of{' '}
+                      <strong>{calcCrop}</strong> at current{' '}
+                      <strong>{telemetry.soilMoisture}</strong> soil moisture.
                     </p>
                   </div>
                   <div className="pt-4 border-t border-emerald-800 flex justify-between text-xs text-emerald-300">
@@ -1026,10 +1353,12 @@ export default function App() {
           {/* 9. REPORTS */}
           {activeTab === 'reports' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div>
                   <h2 className="text-2xl font-bold text-slate-800">Diagnostic Session Audit Log</h2>
-                  <p className="text-sm text-slate-500">History of vision inferences and canopy assessments conducted during this session.</p>
+                  <p className="text-sm text-slate-500">
+                    History of vision inferences and canopy assessments conducted during this session.
+                  </p>
                 </div>
                 <button
                   onClick={() => window.print()}
@@ -1045,17 +1374,18 @@ export default function App() {
                   <Clock className="w-10 h-10 text-slate-300 mx-auto" />
                   <h3 className="text-base font-bold text-slate-700">No Scans Logged Yet</h3>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Run a Leaf Disease Diagnosis or Field Canopy Evaluation in the Dashboard to automatically record audit entries here.
+                    Run a Leaf Disease Diagnosis or Field Canopy Evaluation in the Dashboard to
+                    automatically record audit entries here.
                   </p>
                   <button
-                    onClick={() => setActiveTab('dashboard')}
+                    onClick={() => handleSelectTab('dashboard')}
                     className="mt-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl"
                   >
                     Go to Dashboard
                   </button>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
@@ -1068,11 +1398,15 @@ export default function App() {
                     <tbody className="divide-y divide-slate-100 text-xs">
                       {scanHistory.map((item) => (
                         <tr key={item.id} className="hover:bg-slate-50/70">
-                          <td className="py-3.5 px-6 text-slate-500 font-medium">{item.timestamp}</td>
+                          <td className="py-3.5 px-6 text-slate-500 font-medium">
+                            {item.timestamp}
+                          </td>
                           <td className="py-3.5 px-6 font-semibold text-slate-700">{item.type}</td>
                           <td className="py-3.5 px-6 text-slate-800">{item.summary}</td>
                           <td className="py-3.5 px-6">
-                            <span className="bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full">{item.metric}</span>
+                            <span className="bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full">
+                              {item.metric}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -1087,8 +1421,12 @@ export default function App() {
           {activeTab === 'profile' && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold text-slate-800">Farm & Telemetry Configuration</h2>
-                <p className="text-sm text-slate-500">Switch agricultural regions to dynamically update Open-Meteo satellite coordinates.</p>
+                <h2 className="text-2xl font-bold text-slate-800">
+                  Farm & Telemetry Configuration
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Switch agricultural regions to dynamically update Open-Meteo satellite coordinates.
+                </p>
               </div>
 
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-2xl space-y-5">
@@ -1098,45 +1436,59 @@ export default function App() {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">{farmProfile.owner}</h3>
-                    <p className="text-xs text-slate-500">B.Tech Minor Project • Smart Crop Monitoring System</p>
+                    <p className="text-xs text-slate-600">{farmProfile.email}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      B.Tech Minor Project • Smart Crop Monitoring System
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Active Agricultural Region</label>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">
+                      Active Agricultural Region
+                    </label>
                     <select
                       value={farmProfile.region}
                       onChange={(e) => handleRegionChange(e.target.value)}
                       className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium outline-none focus:border-emerald-500"
                     >
                       <option value="Chennai Region">Chennai Region (13.08°N, 80.27°E)</option>
-                      <option value="East Godavari Region">East Godavari Region (17.00°N, 81.80°E)</option>
+                      <option value="East Godavari Region">
+                        East Godavari Region (17.00°N, 81.80°E)
+                      </option>
                       <option value="Thanjavur Delta">Thanjavur Delta (10.78°N, 79.13°E)</option>
                       <option value="Guntur Agro Belt">Guntur Agro Belt (16.30°N, 80.43°E)</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Total Farm Acreage</label>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1">
+                      Total Farm Acreage
+                    </label>
                     <input
                       type="number"
                       step="0.5"
                       value={farmProfile.acres}
-                      onChange={(e) => setFarmProfile({ ...farmProfile, acres: Number(e.target.value) || 1 })}
+                      onChange={(e) =>
+                        setFarmProfile({ ...farmProfile, acres: Number(e.target.value) || 1 })
+                      }
                       className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:border-emerald-500"
                     />
                   </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                  <span className="flex items-center gap-2"><Sliders className="w-4 h-4 text-emerald-600" /> Active GPS Coordinates:</span>
-                  <span className="font-mono font-bold text-slate-800">{farmProfile.lat}° N, {farmProfile.lon}° E</span>
+                  <span className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-emerald-600" /> Active GPS Coordinates:
+                  </span>
+                  <span className="font-mono font-bold text-slate-800">
+                    {farmProfile.lat}° N, {farmProfile.lon}° E
+                  </span>
                 </div>
               </div>
             </div>
           )}
-
         </div>
       </main>
     </div>
